@@ -11,16 +11,18 @@ import twitter4j.Status;
  */
 public interface Notifier {
 
-	/**
-	 * notify the user about a new status
-	 * @param status
-	 */
-	public void notify(Status status);
+  /**
+   * notify the user about a new status
+   * 
+   * @param status
+   */
+  public void notify(Status status);
 
-	/**
-	 * set up the notifier
-	 * @param properties
-	 */
-	public void setupNotifier(final Properties properties);
+  /**
+   * set up the notifier
+   * 
+   * @param properties
+   */
+  public void setupNotifier(final Properties properties);
 
 }
