@@ -34,9 +34,17 @@ public class TwitterNotifier {
 
     final Notifier notifier = (Notifier) Class.forName(properties.getProperty("notifier")).newInstance();
     notifier.setupNotifier(properties);
+    final boolean includeDirectMessages = Boolean.parseBoolean(properties.getProperty("includeDirectMessages", "true"));
     twitterStream.addListener(new StatusAdapter() {
       @Override
       public void onStatus(final Status status) {
+        final long userId = status.getInReplyToUserId();
+        // check if tweet is a direct tweet to the user
+        // don't notify the user about this kind of tweets
+        if (!includeDirectMessages && (userId != -1)) {
+          return;
+        }
+        
         notifier.notify(status);
       }
     });
