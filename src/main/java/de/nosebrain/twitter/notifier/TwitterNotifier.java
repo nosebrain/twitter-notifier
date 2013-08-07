@@ -32,8 +32,9 @@ public class TwitterNotifier {
     final Configuration conf = new PropertyConfiguration(properties);
     final TwitterStream twitterStream = new TwitterStreamFactory(conf).getInstance();
 
-    final Notifier notifier = (Notifier) Class.forName(properties.getProperty("notifier")).newInstance();
-    notifier.setupNotifier(properties);
+    final Notifier notifier = (Notifier) Class.forName(properties.getProperty("notifier"))
+                                              .getDeclaredConstructor(Properties.class).newInstance(properties);
+    
     final boolean includeDirectMessages = Boolean.parseBoolean(properties.getProperty("includeDirectMessages", "true"));
     twitterStream.addListener(new StatusAdapter() {
       @Override
