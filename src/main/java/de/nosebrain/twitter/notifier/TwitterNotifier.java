@@ -1,8 +1,8 @@
 package de.nosebrain.twitter.notifier;
 
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.lang.reflect.Constructor;
 import java.util.Properties;
 
@@ -11,7 +11,6 @@ import twitter4j.Status;
 import twitter4j.StatusAdapter;
 import twitter4j.TwitterStream;
 import twitter4j.TwitterStreamFactory;
-import twitter4j.conf.Configuration;
 import twitter4j.conf.PropertyConfiguration;
 
 /**
@@ -26,16 +25,22 @@ public class TwitterNotifier {
    * @throws IOException
    */
   public static void main(final String[] args) throws Exception {
-    final String location = args.length == 0 ? System.getProperty("user.home") + "/twitter-notifier.properties" : args[0];
-    final InputStream config = new FileInputStream(location);
+    
+    String location = System.getProperty("user.home") + File.separator 
+                                                      +  "twitter-notifier.properties";
+    if(args.length > 0)
+      location = args[0];
+
     final Properties properties = new Properties();
-    properties.load(config);
-    final Configuration conf = new PropertyConfiguration(properties);
-    final TwitterStream twitterStream = new TwitterStreamFactory(conf).getInstance();
+    properties.load(new FileInputStream(location));
+
+    final TwitterStream twitterStream = new TwitterStreamFactory(
+        new PropertyConfiguration(properties)).getInstance();
 
     Class<?> clazz = Class.forName(properties.getProperty("notifier"));
     Constructor<?> constructor = clazz.getConstructor(Properties.class);
  
+    
     Notifier notifier = null;
     if(constructor != null)
       notifier = (Notifier) constructor.newInstance(properties);
@@ -81,9 +86,7 @@ public class TwitterNotifier {
       
       // check if tweet is a direct tweet to the user
       // don't notify the user about this kind of tweets
-      if (!includeDirectMessages && (userId != -1)) {
-        return;
-      }
+      if (!includeDirectMessages && (userId != -1)) return;
       
       notifier.notify(status);
     }
