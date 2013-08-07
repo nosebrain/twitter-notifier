@@ -3,6 +3,7 @@ package de.nosebrain.twitter.notifier;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.lang.reflect.Constructor;
 import java.util.Properties;
 
 import twitter4j.FilterQuery;
@@ -32,23 +33,22 @@ public class TwitterNotifier {
     final Configuration conf = new PropertyConfiguration(properties);
     final TwitterStream twitterStream = new TwitterStreamFactory(conf).getInstance();
 
-    final Notifier notifier = (Notifier) Class.forName(properties.getProperty("notifier"))
-                                              .getDeclaredConstructor(Properties.class).newInstance(properties);
-    
-    final boolean includeDirectMessages = Boolean.parseBoolean(properties.getProperty("includeDirectMessages", "true"));
-    twitterStream.addListener(new StatusAdapter() {
-      @Override
-      public void onStatus(final Status status) {
-        final long userId = status.getInReplyToUserId();
-        // check if tweet is a direct tweet to the user
-        // don't notify the user about this kind of tweets
-        if (!includeDirectMessages && (userId != -1)) {
-          return;
-        }
-        
-        notifier.notify(status);
-      }
-    });
+    Class<?> clazz = Class.forName(properties.getProperty("notifier"));
+    Constructor<?> constructor = clazz.getConstructor(Properties.class);
+ 
+    Notifier notifier = null;
+    if(constructor != null)
+      notifier = (Notifier) constructor.newInstance(properties);
+    else {
+      constructor = clazz.getConstructor();
+      notifier = (Notifier) constructor.newInstance();
+    }
+
+    final boolean includeDirectMessages = Boolean.parseBoolean(
+                                            properties.getProperty(
+                                                "includeDirectMessages", "true"));
+    twitterStream.addListener(
+        new NotifierStatusAdapter(notifier, includeDirectMessages));
 
     final String twitterIdsString = properties.getProperty("twitterids");
     final String[] split = twitterIdsString.split(",");
@@ -61,4 +61,31 @@ public class TwitterNotifier {
     twitterStream.filter(new FilterQuery(twitterIds));
   }
 
+  public static class NotifierStatusAdapter extends StatusAdapter {
+    
+    private Notifier notifier;
+    private boolean includeDirectMessages;
+
+    public NotifierStatusAdapter(Notifier notifier, boolean includeDirectMessages) {
+      
+      if(notifier == null)
+        throw new IllegalArgumentException("Notifier is mandatory");
+      
+      this.notifier = notifier;
+      this.includeDirectMessages = includeDirectMessages;
+    }
+    
+    @Override
+    public void onStatus(Status status) {
+      final long userId = status.getInReplyToUserId();
+      
+      // check if tweet is a direct tweet to the user
+      // don't notify the user about this kind of tweets
+      if (!includeDirectMessages && (userId != -1)) {
+        return;
+      }
+      
+      notifier.notify(status);
+    }
+  }
 }
